@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch'); // v2 yüklü olmalı
 require('dotenv').config();
 
 const app = express();
