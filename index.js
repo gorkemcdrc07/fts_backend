@@ -1,30 +1,17 @@
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch');
+const fetch = require('node-fetch'); // v2 yüklü olmalı
 require('dotenv').config();
 
 const app = express();
 
-// ✅ Sadece belirli domain'lere izin veriyoruz (özellikle production için)
-const allowedOrigins = [
-    'http://localhost:3000',
-    'https://filo-web.vercel.app', // Vercel'deki frontend domainin
-    'https://filo-web-gorkems-projects-f9c4a0e9.vercel.app' // otomatik Vercel URL'si (gerekliyse)
-];
-
-app.use(cors({
-    origin: function (origin, callback) {
-        // local veya tanımsız origin'e (örneğin Postman) de izin veriyoruz
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('CORS engellendi: ' + origin));
-        }
-    },
+const corsOptions = {
+    origin: ['http://localhost:3000', 'https://filo-web.vercel.app'],
     methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
 
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.post('/api/seferler', async (req, res) => {
@@ -45,6 +32,7 @@ app.post('/api/seferler', async (req, res) => {
         };
 
         console.log('[→] TR zamanlı istek:', body);
+        console.log('✅ API TOKEN:', process.env.API_TOKEN); // Geçici log
 
         const response = await fetch('https://api.odaklojistik.com.tr/api/tmsdespatches/getall', {
             method: 'POST',
@@ -55,15 +43,16 @@ app.post('/api/seferler', async (req, res) => {
             body: JSON.stringify(body)
         });
 
-        const text = await response.text();
-
-        try {
-            const json = JSON.parse(text);
-            res.json(json);
-        } catch (err) {
-            console.error('❌ JSON parse hatası:', err.message);
-            res.status(500).json({ hata: 'Geçersiz JSON', detay: text });
+        // 🔴 BURASI EKLENDİ
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error(`❌ API Hatası: ${response.status} ${response.statusText} - ${errText}`);
+            return res.status(response.status).json({ hata: 'API isteği başarısız', detay: errText });
         }
+
+        const text = await response.text();
+        const json = JSON.parse(text);
+        res.json(json);
 
     } catch (err) {
         console.error('❌ Sunucu hatası:', err.message);
