@@ -4,7 +4,27 @@ const fetch = require('node-fetch');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+
+// ✅ Sadece belirli domain'lere izin veriyoruz (özellikle production için)
+const allowedOrigins = [
+    'http://localhost:3000',
+    'https://filo-web.vercel.app', // Vercel'deki frontend domainin
+    'https://filo-web-gorkems-projects-f9c4a0e9.vercel.app' // otomatik Vercel URL'si (gerekliyse)
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // local veya tanımsız origin'e (örneğin Postman) de izin veriyoruz
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS engellendi: ' + origin));
+        }
+    },
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 app.post('/api/seferler', async (req, res) => {
@@ -36,6 +56,7 @@ app.post('/api/seferler', async (req, res) => {
         });
 
         const text = await response.text();
+
         try {
             const json = JSON.parse(text);
             res.json(json);
